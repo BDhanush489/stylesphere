@@ -74,7 +74,7 @@ export async function GET(req, { params }) {
     price: 2999,
     originalPrice: 3999,
     image: publicUrl,
-    category: "Jackets",
+    category: "Shirts",
     sizes: ["S", "M", "L", "XL"],
     inStock: true,
     rating: 4.5,

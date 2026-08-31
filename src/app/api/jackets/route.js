@@ -57,15 +57,12 @@ export async function GET() {
         .getPublicUrl(`images/${file.name}`);
 
       return {
-        // id: file.name,
-        // name: file.name.split(".")[0],
-        // image: data.publicUrl,
         id: file.name,
-        name: `Shirt ${file.name.split(".")[0]}`,
+        name: `Jacket ${file.name.split(".")[0]}`,
         price: 2999,
         originalPrice: 3999,
         image: data.publicUrl,
-        category: "Shirts",
+        category: "Jackets",
         sizes: ["S", "M", "L", "XL"],
         inStock: true,
         rating: 4.5,
