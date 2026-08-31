@@ -63,11 +63,11 @@ export async function GET() {
 
       return {
         id: file.name,
-        name: `Shirt ${file.name.split(".")[0]}`,
+        name: `T-Shirt ${file.name.split(".")[0]}`,
         price: 2999,
         originalPrice: 3999,
         image: data.publicUrl,
-        category: "Shirts",
+        category: "T-Shirts",
         sizes: ["S", "M", "L", "XL"],
         inStock: true,
         rating: 4.5,
