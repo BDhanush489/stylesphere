@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Mail, Phone, MapPin, Send, User, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Send, User, MessageCircle, Clock } from "lucide-react";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -16,14 +16,23 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-      setFormData({ name: '', email: '', subject: 'General Inquiry', message: '' });
-    }, 1500);
+    try {
+      await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          message: `[${formData.subject}] ${formData.message}`,
+        }),
+      });
+    } catch {
+      // best-effort; still show confirmation since this is a low-stakes contact form
+    }
+    setIsSubmitting(false);
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 4000);
+    setFormData({ name: '', email: '', subject: 'General Inquiry', message: '' });
   };
 
   const handleChange = (e) => {
@@ -34,15 +43,13 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-zinc-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-black text-white py-16">
+      <div className="bg-gray-900 text-white py-16">
         <div className="max-w-6xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-4 tracking-tight">
-            Get in <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Touch</span>
-          </h1>
+          <h1 className="font-display text-4xl md:text-5xl font-semibold mb-4">Contact & Visit StyleSphere</h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Have questions about our latest collections? Need styling advice? We're here to help you elevate your fashion game.
+            Have questions about our brands or collections? Prefer to shop in person? We're here to help.
           </p>
         </div>
       </div>
@@ -58,7 +65,7 @@ export default function Contact() {
 
             {submitted && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-700 font-medium">✨ Message sent successfully! We'll be in touch soon.</p>
+                <p className="text-green-700 font-medium">Message sent successfully! We'll be in touch soon.</p>
               </div>
             )}
 
@@ -73,7 +80,7 @@ export default function Contact() {
                     onChange={handleChange}
                     placeholder="Your Name"
                     required
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                   />
                 </div>
                 <div className="relative">
@@ -85,7 +92,7 @@ export default function Contact() {
                     onChange={handleChange}
                     placeholder="Your Email"
                     required
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -95,13 +102,12 @@ export default function Contact() {
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                 >
                   <option>General Inquiry</option>
-                  <option>Order Status</option>
+                  <option>Brand Availability</option>
                   <option>Size & Fit Questions</option>
-                  <option>Returns & Exchanges</option>
-                  <option>Personal Styling</option>
+                  <option>Visit the Showroom</option>
                   <option>Wholesale Inquiries</option>
                   <option>Press & Media</option>
                 </select>
@@ -116,14 +122,14 @@ export default function Contact() {
                   placeholder="Tell us how we can help you..."
                   rows="5"
                   required
-                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all resize-none"
                 ></textarea>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-lg font-semibold shadow-lg hover:from-purple-700 hover:to-pink-700 transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-gray-900 text-white py-4 px-6 rounded-lg font-semibold shadow-lg hover:bg-black transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -140,50 +146,68 @@ export default function Contact() {
             </form>
           </div>
 
-          {/* Contact Info & Additional Details */}
-          <div className="space-y-8">
-            {/* Contact Info Cards */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="bg-purple-100 p-3 rounded-lg">
-                    <Mail className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">Email Us</h3>
-                    <p className="text-gray-600">hello@stylesphere.com</p>
-                  </div>
+          {/* Contact Info & Store */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <Mail className="h-6 w-6 text-gray-900" />
                 </div>
-                <p className="text-sm text-gray-500">We respond within 24 hours</p>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Email Us</h3>
+                  <p className="text-gray-600">hello@stylesphere.com</p>
+                </div>
               </div>
+              <p className="text-sm text-gray-500">We respond within 24 hours</p>
+            </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="bg-pink-100 p-3 rounded-lg">
-                    <Phone className="h-6 w-6 text-pink-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">Call Us</h3>
-                    <p className="text-gray-600">+1 (555) 123-STYLE</p>
-                  </div>
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <Phone className="h-6 w-6 text-gray-900" />
                 </div>
-                <p className="text-sm text-gray-500">Mon-Fri 9AM-6PM EST</p>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Call Us</h3>
+                  <p className="text-gray-600">+1 (555) 123-STYLE</p>
+                </div>
               </div>
+              <p className="text-sm text-gray-500">Mon–Fri 9AM–6PM</p>
+            </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="bg-indigo-100 p-3 rounded-lg">
-                    <MapPin className="h-6 w-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">Visit Our Showroom</h3>
-                    <p className="text-gray-600">123 Fashion Ave<br />New York, NY 10001</p>
-                  </div>
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <MapPin className="h-6 w-6 text-gray-900" />
                 </div>
-                <p className="text-sm text-gray-500">By appointment only</p>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Visit Our Showroom</h3>
+                  <p className="text-gray-600">123 Fashion Ave<br />New York, NY 10001</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-sm text-gray-500 mt-3 pt-3 border-t border-gray-100">
+                <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p>Tue–Sat: 11AM – 7PM</p>
+                  <p>Sun–Mon: By appointment</p>
+                </div>
               </div>
             </div>
 
+            <div className="bg-gray-900 text-white rounded-xl p-6">
+              <h3 className="font-semibold mb-2">Prefer to browse first?</h3>
+              <p className="text-gray-300 text-sm mb-4">
+                Explore our brands and collections online, then bring your wishlist in-store — or preview a piece
+                with Virtual Try-On before you visit.
+              </p>
+              <div className="flex gap-3">
+                <a href="/products" className="text-sm font-semibold bg-white text-gray-900 px-4 py-2 rounded hover:bg-gray-100">
+                  Shop Online
+                </a>
+                <a href="/try-on" className="text-sm font-semibold border border-white/40 px-4 py-2 rounded hover:bg-white/10">
+                  Try It On
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>

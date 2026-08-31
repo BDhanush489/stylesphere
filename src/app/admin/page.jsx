@@ -1,258 +1,164 @@
-// "use client";
+import { Lock } from "lucide-react";
+import { getCatalogStats, getBrands, getCollections } from "@/services/catalogService";
+import { listInquiries } from "@/services/inquiryService";
 
-// import { useState } from "react";
-// import { createClient } from "@supabase/supabase-js";
+export const metadata = { title: "Admin | StyleSphere" };
 
-// const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-// const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-// const supabase = createClient(supabaseUrl, supabaseKey);
+// Inquiries change at request time (in-memory store) — without this, Next.js
+// would statically prerender this page once at build time and the counts
+// would never update.
+export const dynamic = "force-dynamic";
 
-// async function addProduct() {
-//   const { data, error } = await supabase
-//     .from('products')
-//     .insert([
-//       { name: 'Test Product', description: 'Testing', price: 100 }
-//     ]);
+// FOUNDATION ONLY: this dashboard is read-only. There is no authentication
+// guard here yet and no working create/edit/delete flow — see
+// docs/PRODUCT_STATUS.md. Do not expose this route publicly before both are
+// in place.
+function DisabledButton({ children }) {
+  return (
+    <button
+      disabled
+      title="Coming soon — connect this section to a database to enable editing"
+      className="text-xs font-semibold border border-gray-300 text-gray-400 px-3 py-1.5 rounded cursor-not-allowed"
+    >
+      {children}
+    </button>
+  );
+}
 
-//   if (error) console.log('Error:', error);
-//   else console.log('Success:', data);
-// }
-
-// export default function AdminPage() {
-//   const [name, setName] = useState("");
-//   const [description, setDescription] = useState("");
-//   const [price, setPrice] = useState("");
-//   const [imageFile, setImageFile] = useState(null);
-//   const [loading, setLoading] = useState(false);
-//   const [message, setMessage] = useState("");
-
-//   // addProduct();
-  
-//   const handleFileChange = (e) => {
-//     setImageFile(e.target.files[0]);
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     if (!imageFile) {
-//       setMessage("Please select an image!");
-//       return;
-//     }
-
-//     setLoading(true);
-
-//     try {
-//       // 1️⃣ Upload image to Supabase Storage
-//       const fileName = `${Date.now()}-${imageFile.name}`;
-//       const { data: uploadData, error: uploadError } = await supabase.storage
-//         .from("product-images") // your bucket name
-//         .upload(fileName, imageFile);
-
-//       if (uploadError) throw uploadError;
-
-//       // 2️⃣ Get public URL of the uploaded image
-//       const { publicUrl, error: urlError } = supabase.storage
-//         .from("product-images")
-//         .getPublicUrl(fileName);
-
-//       if (urlError) throw urlError;
-
-//       // 3️⃣ Insert product into table
-//       const { data, error: insertError } = await supabase
-//         .from("products")
-//         .insert([
-//           {
-//             name,
-//             description,
-//             price,
-//             image_url: publicUrl,
-//           },
-//         ]);
-
-//       if (insertError) throw insertError;
-
-//       setMessage("Product added successfully!");
-//       setName("");
-//       setDescription("");
-//       setPrice("");
-//       setImageFile(null);
-//     } catch (error) {
-//       console.error(error);
-//       setMessage("Error: " + error.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="p-6 max-w-md mx-auto">
-//       <h1 className="text-2xl font-bold mb-4">Add New Product</h1>
-//       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-//         <input
-//           type="text"
-//           placeholder="Product Name"
-//           value={name}
-//           onChange={(e) => setName(e.target.value)}
-//           required
-//           className="border p-2"
-//         />
-//         <textarea
-//           placeholder="Description"
-//           value={description}
-//           onChange={(e) => setDescription(e.target.value)}
-//           className="border p-2"
-//         />
-//         <input
-//           type="number"
-//           placeholder="Price"
-//           value={price}
-//           onChange={(e) => setPrice(e.target.value)}
-//           required
-//           className="border p-2"
-//         />
-//         <input type="file" accept="image/*" onChange={handleFileChange} />
-//         <button
-//           type="submit"
-//           disabled={loading}
-//           className="bg-blue-500 text-white p-2 rounded"
-//         >
-//           {loading ? "Uploading..." : "Add Product"}
-//         </button>
-//       </form>
-//       {message && <p className="mt-4">{message}</p>}
-//     </div>
-//   );
-// }
-
-"use client";
-
-import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-// import products from "razorpay/dist/types/products";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export default function AdminPage() {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [category, setCategory] = useState("shirts"); // default option
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const handleFileChange = (e) => {
-    setImageFile(e.target.files[0]);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!imageFile) {
-      setMessage("Please select an image!");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // 1️⃣ Define the upload path inside selected bucket
-      const fileName = `${Date.now()}-${imageFile.name}`;
-      const filePath = `images/${fileName}`; // ✅ always "images" folder
-
-      // 2️⃣ Upload image to selected bucket (shirts / tshirts / jackets)
-      const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(category) // ✅ dynamically use selected category bucket
-          .upload(filePath, imageFile);
-
-      if (uploadError) throw uploadError;
-
-      // 3️⃣ Get public URL of the uploaded image
-      const { data: { publicUrl }, error: urlError } = supabase.storage
-        .from(category)
-        .getPublicUrl(filePath);
-
-      if (urlError) throw urlError;
-
-      // 4️⃣ Insert product into products table
-      const { data, error: insertError } = await supabase
-        .from("products")
-        .insert([
-          {
-            name,
-            description,
-            price,
-            image_url: publicUrl,
-            category, // save which bucket/category
-          },
-        ]);
-
-      if (insertError) throw insertError;
-
-      setMessage("✅ Product added successfully!");
-      setName("");
-      setDescription("");
-      setPrice("");
-      setImageFile(null);
-      setCategory("shirts"); // reset to default
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Error: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+export default async function AdminPage() {
+  const stats = getCatalogStats();
+  const brands = getBrands();
+  const collections = getCollections();
+  const inquiries = listInquiries();
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Add New Product</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          type="text"
-          placeholder="Product Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          className="border p-2"
-        />
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="border p-2"
-        />
-        <input
-          type="number"
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-          className="border p-2"
-        />
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-gray-900 text-white py-10">
+        <div className="max-w-6xl mx-auto px-6">
+          <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">StyleSphere</p>
+          <h1 className="font-display text-3xl font-semibold">Admin Dashboard</h1>
+          <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
+            <Lock className="w-4 h-4" /> Foundation only — no auth guard yet, and editing isn't wired to a database.
+          </p>
+        </div>
+      </div>
 
-        {/* Category dropdown */}
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="border p-2"
-        >
-          <option value="shirts">Shirt</option>
-          <option value="tshirts">T-Shirt</option>
-          <option value="jackets">Jacket</option>
-        </select>
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: "Brands", value: stats.brandCount },
+            { label: "Products", value: stats.productCount },
+            { label: "Collections", value: stats.collectionCount },
+            { label: "Inquiries", value: inquiries.length },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-white border border-gray-200 rounded-lg p-5">
+              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500 mt-1">{stat.label}</p>
+            </div>
+          ))}
+        </div>
 
-        <input type="file" accept="image/*" onChange={handleFileChange} />
+        {/* Brands */}
+        <section className="bg-white border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Brands</h2>
+            <DisabledButton>+ Add Brand</DisabledButton>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 text-xs uppercase tracking-wide">
+                <th className="px-5 py-2">Name</th>
+                <th className="px-5 py-2">Aesthetic</th>
+                <th className="px-5 py-2">Products</th>
+                <th className="px-5 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {brands.map((brand) => (
+                <tr key={brand.slug} className="border-t border-gray-100">
+                  <td className="px-5 py-3 font-medium text-gray-900">{brand.name}</td>
+                  <td className="px-5 py-3 text-gray-600">{brand.aesthetic}</td>
+                  <td className="px-5 py-3 text-gray-600">{brand.productCount}</td>
+                  <td className="px-5 py-3 text-right"><DisabledButton>Edit</DisabledButton></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-500 text-white p-2 rounded"
-        >
-          {loading ? "Uploading..." : "Add Product"}
-        </button>
-      </form>
-      {message && <p className="mt-4">{message}</p>}
+        {/* Collections */}
+        <section className="bg-white border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Collections</h2>
+            <DisabledButton>+ Add Collection</DisabledButton>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 text-xs uppercase tracking-wide">
+                <th className="px-5 py-2">Name</th>
+                <th className="px-5 py-2">Products</th>
+                <th className="px-5 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {collections.map((collection) => (
+                <tr key={collection.slug} className="border-t border-gray-100">
+                  <td className="px-5 py-3 font-medium text-gray-900">{collection.name}</td>
+                  <td className="px-5 py-3 text-gray-600">{collection.productCount}</td>
+                  <td className="px-5 py-3 text-right"><DisabledButton>Edit</DisabledButton></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        {/* Products placeholder */}
+        <section className="bg-white border border-gray-200 rounded-lg p-5">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold text-gray-900">Products ({stats.productCount})</h2>
+            <DisabledButton>+ Add Product</DisabledButton>
+          </div>
+          <p className="text-sm text-gray-500">
+            Products are currently generated from bundled photography (see src/lib/catalog). Once a real products
+            table exists, this section lists and edits inventory directly.
+          </p>
+        </section>
+
+        {/* Inquiries */}
+        <section className="bg-white border border-gray-200 rounded-lg">
+          <div className="p-5 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Recent Enquiries ({inquiries.length})</h2>
+          </div>
+          {inquiries.length === 0 ? (
+            <p className="text-sm text-gray-500 p-5">No enquiries yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="px-5 py-2">Name</th>
+                  <th className="px-5 py-2">Contact</th>
+                  <th className="px-5 py-2">Product</th>
+                  <th className="px-5 py-2">Received</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inquiries.slice(0, 20).map((inquiry) => (
+                  <tr key={inquiry.id} className="border-t border-gray-100">
+                    <td className="px-5 py-3 font-medium text-gray-900">{inquiry.name}</td>
+                    <td className="px-5 py-3 text-gray-600">{inquiry.email || inquiry.phone}</td>
+                    <td className="px-5 py-3 text-gray-600">{inquiry.productName || "—"}</td>
+                    <td className="px-5 py-3 text-gray-500">{new Date(inquiry.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="text-xs text-gray-400 p-5 pt-0">
+            Enquiries are stored in memory for this server session only — connect a database to persist them.
+          </p>
+        </section>
+      </div>
     </div>
   );
 }

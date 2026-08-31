@@ -1,15 +1,5 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import ProductListingPage from "@/components/ProductListingPage";
-
-export default function StylesphereTShirtsPage() {
-  return (
-    <ProductListingPage
-      apiEndpoint="/api/tshirts"
-      basePath="/tshirts"
-      type="tshirt"
-      fallbackIcon="👕"
-      pageTitle="T-Shirts"
-    />
-  );
+export default function TShirtsRedirect() {
+  redirect("/products?category=tshirts");
 }

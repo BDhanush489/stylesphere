@@ -1,10 +1,9 @@
 import "./globals.css";
-import { Poppins } from "next/font/google";
+import { Poppins, Playfair_Display } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "@/components/AuthContext";
-import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { Toaster } from "react-hot-toast";
 
@@ -15,28 +14,30 @@ const poppins = Poppins({
   display: "swap",
 });
 
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+
 export const metadata = {
-  title: "Stylesphere",
-  description: "Discover fashion that fits your style ✨",
+  title: "StyleSphere",
+  description: "A premium fashion destination — discover brands, explore collections, and try before you buy.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={poppins.variable}>
-      <head>
-        <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
-      </head>
+    <html lang="en" className={`${poppins.variable} ${playfair.variable}`}>
       <body className="font-sans antialiased flex min-h-screen flex-col">
         <Toaster position="top-center" reverseOrder={false} />
         <GoogleOAuthProvider clientId="1043471859432-57jsco645009nnmaqt9s0a6blqpc707u.apps.googleusercontent.com">
           <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <Navbar />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </WishlistProvider>
-            </CartProvider>
+            <WishlistProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </WishlistProvider>
           </AuthProvider>
         </GoogleOAuthProvider>
       </body>
