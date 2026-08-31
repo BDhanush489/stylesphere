@@ -1,10 +1,20 @@
-// Server-only. Reads the bundled product photography from /public/{category}/images.
+// Reads product photography filenames from a build-time manifest rather
+// than the filesystem at request time.
 //
-// PROTOTYPE DATA LAYER: this stands in for a real product-images table/CDN.
-// Swap listCategoryImages() for a database query once brands/products are
-// managed through the admin CMS instead of the filesystem.
-import fs from "fs";
-import path from "path";
+// This used to call fs.readdirSync(process.cwd() + "/public/...") directly.
+// That works under `next dev`/`next start` but is NOT reliable on Vercel:
+// `/public` is uploaded to their static CDN separately from the serverless
+// function bundle, so a dynamic route (any of our `ƒ` routes — /api/products,
+// /brands/[slug], /products/[slug], etc.) reading it via `fs` at request time
+// can silently see an empty or missing directory in production even though
+// `next build`/local testing look fine. Importing a plain JSON manifest
+// instead makes this a normal bundled module with no runtime filesystem
+// dependency, so it behaves identically in dev, `next start`, and on Vercel.
+//
+// Regenerate imageManifest.json if photos are added/removed under
+// public/{shirts,tshirts,jackets}/images (see the one-off script used to
+// generate it — a plain fs.readdirSync loop over each category folder).
+import manifest from "./imageManifest.json";
 
 export const CATEGORIES = ["shirts", "tshirts", "jackets"];
 
@@ -14,13 +24,6 @@ export const CATEGORY_LABELS = {
   jackets: "Jackets",
 };
 
-const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
-
 export function listCategoryImages(category) {
-  const dir = path.join(process.cwd(), "public", category, "images");
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter((file) => IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase()))
-    .sort(); // stable, deterministic ordering across requests
+  return manifest[category] || [];
 }

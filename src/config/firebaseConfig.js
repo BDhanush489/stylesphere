@@ -12,8 +12,25 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Prevent re-initialization in Next.js hot reload
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+let authInstance = null;
 
-export const auth = getAuth(app);
+// Lazy and defensive on purpose: initializing Firebase with a missing or
+// invalid API key throws immediately. Doing this eagerly at module scope
+// used to crash the entire production build — Next.js prerenders this "use
+// client" page's initial HTML on the server too, so importing this module
+// anywhere took the whole build down whenever Firebase env vars weren't
+// configured. Only call getFirebaseAuth() from a browser event handler.
+export function getFirebaseAuth() {
+  if (authInstance) return authInstance;
+  if (typeof window === "undefined") {
+    throw new Error("Firebase Auth is only available in the browser.");
+  }
+  if (!firebaseConfig.apiKey) {
+    throw new Error("Phone verification isn't configured yet (missing Firebase credentials).");
+  }
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+  authInstance = getAuth(app);
+  return authInstance;
+}
+
 export { RecaptchaVerifier, signInWithPhoneNumber };

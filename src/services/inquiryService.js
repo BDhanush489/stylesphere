@@ -1,20 +1,26 @@
-// PROTOTYPE PERSISTENCE: inquiries are written to a JSON file on disk
-// (.data/inquiries.json) rather than a real database.
+// PROTOTYPE PERSISTENCE: inquiries are written to a JSON file under the
+// OS temp directory rather than a real database.
 //
-// This has to be file-backed rather than a plain in-memory array: Next.js
-// bundles Route Handlers and Server Component pages into separate module
-// graphs, so a module-level array here would NOT actually be shared between
-// `POST /api/inquiries` and the `/admin` page — each gets its own instance,
-// and the admin dashboard would silently show stale/empty data. A file on
-// disk is visible to both. This still won't survive a redeploy or work
-// across multiple server instances — swap it for a real `inquiries` table
-// before relying on it in production. Every reader/writer goes through this
-// module, so that swap won't touch any callers.
+// Two deliberate choices here, both learned the hard way:
+//  1. File-backed, not a module-level array — Next.js bundles Route
+//     Handlers and Server Component pages into separate module graphs, so a
+//     plain in-memory array would NOT actually be shared between
+//     `POST /api/inquiries` and the `/admin` page (each gets its own
+//     instance, and the dashboard would silently show stale/empty data).
+//  2. os.tmpdir(), not a project-relative folder — Vercel's serverless
+//     functions have a read-only filesystem outside of `/tmp`; writing to
+//     `process.cwd()/.data` throws EROFS in production even though it
+//     works fine under `next dev`/`next start` locally.
+//
+// This still won't survive a redeploy, a cold start on a fresh instance, or
+// work across multiple concurrent server instances. Swap it for a real
+// `inquiries` table before relying on it in production — every reader/writer
+// goes through this module, so that swap won't touch any callers.
 import fs from "fs";
+import os from "os";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const DATA_FILE = path.join(DATA_DIR, "inquiries.json");
+const DATA_FILE = path.join(os.tmpdir(), "stylesphere-inquiries.json");
 
 function readAll() {
   try {
@@ -25,8 +31,11 @@ function readAll() {
 }
 
 function writeAll(inquiries) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(inquiries, null, 2));
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(inquiries, null, 2));
+  } catch (err) {
+    console.error("[inquiry] failed to persist inquiry:", err);
+  }
 }
 
 function isValidEmail(value) {

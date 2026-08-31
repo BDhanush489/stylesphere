@@ -21,6 +21,13 @@ Legend:
   but attributes — brand assignment, price, material, fit, tags, availability —
   are deterministically generated from a hash of the filename. They're stable
   across requests, not stored anywhere.
+- The list of filenames per category comes from a build-time manifest
+  (`src/lib/catalog/imageManifest.json`), not a runtime `fs.readdirSync` over
+  `/public`. Reading `/public` via `fs` inside a serverless function is not
+  reliable on Vercel (static assets are uploaded to their CDN separately
+  from the function bundle), so any dynamic route doing that could see an
+  empty/missing directory in production. Regenerate the manifest if photos
+  are added or removed.
 - Brands (`src/lib/catalog/brands.js`) and Collections (`src/lib/catalog/collections.js`)
   are hard-coded. ClothHive's logo is a real bundled asset; the others use a
   typographic monogram (`src/components/BrandMark.jsx`) as a placeholder.
@@ -41,13 +48,15 @@ Legend:
 
 **Status: Prototype persistence.**
 
-- `src/services/inquiryService.js` stores submissions in a JSON file on disk
-  (`.data/inquiries.json`), not a real database — it's file-backed rather
-  than an in-memory array specifically because Next.js bundles Route
-  Handlers and Server Component pages into separate module graphs, so a
-  plain module-level array is NOT actually shared between `POST
-  /api/inquiries` and the `/admin` page. This won't survive a redeploy and
-  won't work across multiple server instances.
+- `src/services/inquiryService.js` stores submissions in a JSON file under
+  the OS temp directory, not a real database — it's file-backed rather than
+  an in-memory array specifically because Next.js bundles Route Handlers and
+  Server Component pages into separate module graphs, so a plain
+  module-level array is NOT actually shared between `POST /api/inquiries`
+  and the `/admin` page. It uses `os.tmpdir()` rather than a project-relative
+  folder because Vercel's serverless functions have a read-only filesystem
+  outside of `/tmp`. This still won't survive a redeploy, a cold start on a
+  fresh instance, or work across multiple concurrent server instances.
 - The form, validation, and confirmation UX (`/enquire`) are real and usable
   today for collecting leads in a demo/staging setting.
 - **To go to production:** swap `inquiryService.js` for a real `inquiries`

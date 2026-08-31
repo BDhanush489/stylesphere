@@ -1,10 +1,8 @@
 "use client";
 import { useState } from "react";
-import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "@/config/firebaseConfig";
+import { getFirebaseAuth, RecaptchaVerifier, signInWithPhoneNumber } from "@/config/firebaseConfig";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { createClient } from "@supabase/supabase-js";
-
 
 export default function VerifyPhonePage() {
   const router = useRouter();
@@ -13,22 +11,28 @@ export default function VerifyPhonePage() {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [step, setStep] = useState("enterPhone"); // enterPhone | enterOtp
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  // Lazy on purpose — see src/config/firebaseConfig.js. Never create this (or
+  // the Supabase client below) at module/render scope; only inside a
+  // browser event handler like this one.
   async function syncUserToSupabase(user) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.warn("Supabase isn't configured — skipping profile sync.");
+      return;
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
     const storedUser = JSON.parse(localStorage.getItem("user")) || {};
     const { uid, email, phoneNumber, photoURL } = user;
 
-    const userId = uid;
-
-    // 👉 Save globally
-    localStorage.setItem("userId", userId);
+    localStorage.setItem("userId", uid);
 
     const { error } = await supabase.from("profiles").upsert(
       {
-        id: uid, // ✅ use Firebase UID as primary key
+        id: uid, // Firebase UID as primary key
         email: email || storedUser.email || null,
         phone: phoneNumber || storedUser.phone || null,
         profile_picture_url: photoURL || storedUser.picture || null,
@@ -38,17 +42,14 @@ export default function VerifyPhonePage() {
       { onConflict: "id" }
     );
 
-    console.log(uid);
     if (error) {
       console.error("Error syncing profile:", error);
-    } else {
-      console.log("✅ Profile synced to Supabase");
     }
   }
 
   const sendOtp = async () => {
     try {
-      // Create invisible reCAPTCHA verifier
+      const auth = getFirebaseAuth();
       window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
         size: "invisible",
       });
@@ -58,29 +59,26 @@ export default function VerifyPhonePage() {
       setStep("enterOtp");
     } catch (err) {
       console.error("Error sending OTP", err);
-      toast.error("Failed to send OTP. Check number format (+91...)");
+      toast.error(err.message?.includes("configured") ? err.message : "Failed to send OTP. Check number format (+91...)");
     }
   };
 
   const verifyOtp = async () => {
     try {
-      const result = await confirmationResult.confirm(otp); // returns UserCredential
-      const user = result.user; // ✅ get user
+      const result = await confirmationResult.confirm(otp);
+      const user = result.user;
 
       localStorage.setItem("phone_verified", "true");
       toast.success("Phone verified successfully!");
 
-      console.log(user);
+      await syncUserToSupabase(user);
 
-      await syncUserToSupabase(user); // ✅ now user is defined
-
-      router.push("/"); // redirect home after verification
+      router.push("/");
     } catch (err) {
       console.error("OTP Verification failed", err);
       toast.error("Invalid OTP, try again.");
     }
   };
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 px-6">
